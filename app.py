@@ -1,21 +1,13 @@
-from gevent import monkey
-monkey.patch_all()
-from flask import Flask, render_template, request, session
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from wtforms import Form, StringField, IntegerField
 from wtforms.validators import DataRequired
 import os
 import openai
-import random
-import string
 
 app = Flask(__name__)
-app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
-
-socketio = SocketIO(app, async_mode='gevent')  # Add async_mode
+app.secret_key = '123456789'
 
 
-# Your InputForm class and other code ...
 class InputForm(Form):
     property_type = StringField('Property Type', validators=[DataRequired()])
     location = StringField('Location', validators=[DataRequired()])
@@ -42,20 +34,21 @@ class InputForm(Form):
     points_of_interest = StringField('Nearby Points of Interest')
     recent_updates = StringField('Recent Updates or Renovations')
 
-# Remove the 'generate' and 'follow_up' routes
 
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
     form = InputForm(request.form)
+    if request.method == 'POST' and form.validate():
+        session.clear()  # Clear previous conversation
+        return redirect(url_for('generate'))
     return render_template('index.html', form=form)
 
 
-@socketio.on('generate')
-def generate(data):
-    form = InputForm(data=data)
+@app.route('/generate', methods=['GET', 'POST'])
+def generate():
+    form = InputForm(request.form)
     if form.validate():
-        # Your GPT-3 API call and other code ...
+
         openai.api_key = os.getenv("OPENAI_API_KEY")
         prompt = f"Write a top-selling description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
         # Add details that might not be applicable for every property
@@ -99,29 +92,26 @@ def generate(data):
             prompt += f" Recent updates or renovations include {form.recent_updates.data}."
 
         messages = [
-            {"role": "system",
-             "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
+            {"role": "system", "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
             {"role": "user", "content": f"Let's think about this step-by-step. {prompt}"}
         ]
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.7,
-            max_tokens=500,
         )
         description = response["choices"][0]["message"]["content"]
         messages.append({"role": "assistant", "content": description})
         session['messages'] = messages  # Add this line to store messages in the session
         print(description)
+        return jsonify(description=description)
+    return jsonify(error="Invalid form data"), 400
 
-        emit('description', description)  # Use emit instead of jsonify to send the generated description
 
-
-@socketio.on('follow_up')
-def follow_up(data):
-    user_message = data['question']
+@app.route('/follow_up', methods=['POST'])
+def follow_up():
+    user_message = request.form.get('question')  # Corrected here
     if 'messages' in session:
-        # Your GPT-3 API call and other code ...
         messages = session['messages']
         messages.append({"role": "user", "content": user_message})
         # Generate response
@@ -135,9 +125,11 @@ def follow_up(data):
         print(assistant_message)
         messages.append({"role": "assistant", "content": assistant_message})
         session['messages'] = messages  # Save updated conversation to session
-
-        emit('message', assistant_message)  # Use emit instead of jsonify to send the message
+        return jsonify(message=assistant_message)
+    else:
+        print("Nope")
+        return jsonify(error="No conversation found"), 400
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)  # Change back to socketio.run
+    app.run(debug=True)
