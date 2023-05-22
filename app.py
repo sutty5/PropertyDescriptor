@@ -1,14 +1,13 @@
+from gevent import monkey
+monkey.patch_all()
 from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO, emit
 from wtforms import Form, StringField, IntegerField
 from wtforms.validators import DataRequired
-
 import os
 import openai
 import random
 import string
-from gevent import monkey
-monkey.patch_all()
 
 app = Flask(__name__)
 app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
