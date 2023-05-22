@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Property Description Generator</title>
+    <title>PropertyShop Description Generator</title>
     <!-- The viewport meta tag ensures your website is scalable and responsive on all devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -19,6 +19,9 @@
             padding: 20px;
             color: #000000;
         }
+        #chat-window {
+            background-color: #ffffff;
+        }
         .btn {
             background-color: #4CAF50;
             color: white;
@@ -29,14 +32,52 @@
         input[type="submit"] {
             transition-duration: 0.4s;
         }
+        #loading-overlay {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+        }
+        #loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        z-index: 999;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .text-black {
+    color: #000000;
+    }
+
+    .chat-input-container {
+        display: flex;
+    }
+    .chat-input-container input[type="text"] {
+        flex-grow: 1;
+    }
+
     </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center my-4">Property Description Generator</h1>
-        <p class="text-center">Please fill in the details about the property below. If a field does not apply, please leave it blank.</p>
+        <h1 class="text-center my-4">PropertyShop Description Generator</h1>
+        <p id="form-instructions" class="text-center">Please fill in the details about the property below. If a field does not apply, please leave it blank.</p>
 
-        <form method="POST" class="form-container">
+        <form id="description-form" class="form-container">
             <div class="form-row">
                 {% for field in [form.property_type, form.location, form.bedrooms, form.bathrooms, form.en_suite_bathrooms, form.square_footage, form.community, form.driveway, form.garage, form.outdoor_features, form.additional_exterior, form.special_rooms, form.flooring_type, form.special_features, form.natural_light, form.decorative_style, form.kitchen_layout, form.kitchen_fittings, form.kitchen_features, form.bathroom_details, form.security_features, form.character_details, form.points_of_interest, form.recent_updates] %}
                     <!-- The class changes here will allow responsive form field width -->
@@ -47,9 +88,85 @@
                 {% endfor %}
             </div>
             <div class="form-group text-center my-4">
-                <input type="submit" class="btn btn-primary" value="Generate Description">
+                <button type="submit" class="btn btn-primary">Generate Description</button>
             </div>
         </form>
+        <!-- Add a new chat-container div -->
+            <div id="chat-container" style="display: none;">
+              <h2>Chat with Assistant</h2>
+              <!-- Add a new chat-window div to display messages -->
+              <div id="chat-window" class="text-black" style="border: 1px solid #ccc; border-radius: 5px; max-width: 100%; overflow-y: auto; height: 400px; padding: 10px;">
+              </div>
+              <h5>Let me know if I should make any changes:</h5>
+              <form id="chat-form" class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Ask for adjustments or changes..." required>
+                <input type="submit" value="Send">
+              </form>
+            <a href="/">Back</a>
+        </div>
     </div>
+    <div id="loading-overlay" style="display: none;">
+        <div id="loading-spinner">
+            <div class="spinner-border text-light" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p class="text-light">Generating Description</p>
+        </div>
+    </div>
+
+
+
+    <script>
+        $(document).ready(function() {
+            $("#description-form").submit(function(event) {
+                event.preventDefault();
+                generateDescription();
+            });
+
+            $("#chat-form").submit(function(event) { // Updating this line from #followup-form to #chat-form
+                event.preventDefault();
+                askFollowupQuestion();
+            });
+        });
+
+        function generateDescription() {
+            $("#loading-overlay").show();
+            $.post("/generate", $("#description-form").serialize(), function(data) { // Add 'data' here
+                $("#loading-overlay").hide();
+                if (data.error) {
+                    alert("Error generating description: " + data.error);
+                } else {
+                    $("#chat-window").append('<p><strong>Assistant:</strong> ' + data.description + '</p>');
+                    scrollToLatestMessage();
+                    $("#description-form").hide();
+                    $("#form-instructions").hide();
+                    $("#chat-container").show();
+                }
+            });
+        }
+
+        function askFollowupQuestion() {
+            var question = $("#chat-input").val();
+            $("#chat-input").val('');
+            $("#chat-window").append('<p><strong>You:</strong> ' + question + '</p>');
+
+            // Send a POST request to the /follow-up endpoint
+            $.post("/follow_up", { question: question }, function(data) {
+                if (data.error) {
+                    alert("Error asking follow-up question: " + data.error);
+                } else {
+                    // Append the assistant's answer to the chat window
+                    $("#chat-window").append('<p><strong>Assistant:</strong> ' + data.message + '</p>');
+                    scrollToLatestMessage();
+                }
+            });
+        }
+        function scrollToLatestMessage() {
+            var chatWindow = $("#chat-window");
+            chatWindow.scrollTop(chatWindow.prop("scrollHeight"));
+        }
+
+    </script>
+
 </body>
 </html>

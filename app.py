@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request
-from wtforms import Form, StringField, IntegerField, TextAreaField
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from wtforms import Form, StringField, IntegerField
 from wtforms.validators import DataRequired
 import os
 import openai
 
 app = Flask(__name__)
+app.secret_key = '123456789'
 
 
 class InputForm(Form):
@@ -38,33 +39,18 @@ class InputForm(Form):
 def index():
     form = InputForm(request.form)
     if request.method == 'POST' and form.validate():
-        property_type = request.form['property_type']
-        location = request.form['location']
-        bedrooms = request.form['bedrooms']
-        bathrooms = request.form['bathrooms']
-        en_suite_bathrooms = request.form['en_suite_bathrooms']
-        square_footage = request.form['square_footage']
-        community = request.form['community']
-        driveway = request.form['driveway']
-        garage = request.form['garage']
-        outdoor_features = request.form['outdoor_features']
-        additional_exterior = request.form['additional_exterior']
-        special_rooms = request.form['special_rooms']
-        flooring_type = request.form['flooring_type']
-        special_features = request.form['special_features']
-        natural_light = request.form['natural_light']
-        decorative_style = request.form['decorative_style']
-        kitchen_layout = request.form['kitchen_layout']
-        kitchen_fittings = request.form['kitchen_fittings']
-        kitchen_features = request.form['kitchen_features']
-        bathroom_details = request.form['bathroom_details']
-        security_features = request.form['security_features']
-        character_details = request.form['character_details']
-        points_of_interest = request.form['points_of_interest']
-        recent_updates = request.form['recent_updates']
+        session.clear()  # Clear previous conversation
+        return redirect(url_for('generate'))
+    return render_template('index.html', form=form)
+
+
+@app.route('/generate', methods=['GET', 'POST'])
+def generate():
+    form = InputForm(request.form)
+    if form.validate():
 
         openai.api_key = os.getenv("OPENAI_API_KEY")
-        prompt = f"Write a description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
+        prompt = f"Write a top-selling description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
         # Add details that might not be applicable for every property
         if form.community.data:
             prompt += f" The property is part of a community or complex named {form.community.data}."
@@ -106,7 +92,7 @@ def index():
             prompt += f" Recent updates or renovations include {form.recent_updates.data}."
 
         messages = [
-            {"role": "system", "content": "You are an estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed and should use the best sales tactics to really sell the property"},
+            {"role": "system", "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
             {"role": "user", "content": f"Let's think about this step-by-step. {prompt}"}
         ]
         response = openai.ChatCompletion.create(
@@ -115,10 +101,36 @@ def index():
             temperature=0.7,
         )
         description = response["choices"][0]["message"]["content"]
+        messages.append({"role": "assistant", "content": description})
+        session['messages'] = messages  # Add this line to store messages in the session
         print(description)
-        return render_template('result.html', description=description)
-    return render_template('index.html', form=form)
+        return jsonify(description=description)
+    return jsonify(error="Invalid form data"), 400
+
+
+@app.route('/follow_up', methods=['POST'])
+def follow_up():
+    user_message = request.form.get('question')  # Corrected here
+    if 'messages' in session:
+        messages = session['messages']
+        messages.append({"role": "user", "content": user_message})
+        # Generate response
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            temperature=0.9,
+        )
+        assistant_message = response["choices"][0]["message"]["content"]
+        print(assistant_message)
+        messages.append({"role": "assistant", "content": assistant_message})
+        session['messages'] = messages  # Save updated conversation to session
+        return jsonify(message=assistant_message)
+    else:
+        print("Nope")
+        return jsonify(error="No conversation found"), 400
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+
