@@ -1,1 +1,1 @@
-web: gunicorn app:app --timeout 60
+web: gunicorn app:app --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker --log-file -

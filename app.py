@@ -7,11 +7,13 @@ import os
 import openai
 import random
 import string
+from gevent import monkey
+monkey.patch_all()
 
 app = Flask(__name__)
 app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
-socketio = SocketIO(app)  # Add this line to initialize Flask-SocketIO
+socketio = SocketIO(app, async_mode='gevent')  # Add async_mode
 
 
 # Your InputForm class and other code ...
@@ -139,4 +141,4 @@ def follow_up(data):
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, debug=True)  # Change back to socketio.run
