@@ -95,6 +95,7 @@ def generate():
             {"role": "system", "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
             {"role": "user", "content": f"Let's think about this step-by-step. {prompt}"}
         ]
+        print("executing AI")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
@@ -103,7 +104,6 @@ def generate():
         description = response["choices"][0]["message"]["content"]
         messages.append({"role": "assistant", "content": description})
         session['messages'] = messages  # Add this line to store messages in the session
-        print(description)
         return jsonify(description=description)
     return jsonify(error="Invalid form data"), 400
 
@@ -122,7 +122,6 @@ def follow_up():
             temperature=0.9,
         )
         assistant_message = response["choices"][0]["message"]["content"]
-        print(assistant_message)
         messages.append({"role": "assistant", "content": assistant_message})
         session['messages'] = messages  # Save updated conversation to session
         return jsonify(message=assistant_message)
@@ -132,4 +131,4 @@ def follow_up():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()

@@ -130,20 +130,25 @@
         });
 
         function generateDescription() {
-            $("#loading-overlay").show();
-            $.post("/generate", $("#description-form").serialize(), function(data) { // Add 'data' here
-                $("#loading-overlay").hide();
+            // Show the chat window and a loading message
+            $("#chat-window").append('<p>Loading...</p>');
+            scrollToLatestMessage();
+            $("#description-form").hide();
+            $("#form-instructions").hide();
+            $("#chat-container").show();
+
+            $.post("/generate", $("#description-form").serialize(), function(data) {
+                // Remove the loading message
+                $("#chat-window").empty();
                 if (data.error) {
                     alert("Error generating description: " + data.error);
                 } else {
                     $("#chat-window").append('<p><strong>Assistant:</strong> ' + data.description + '</p>');
                     scrollToLatestMessage();
-                    $("#description-form").hide();
-                    $("#form-instructions").hide();
-                    $("#chat-container").show();
                 }
             });
         }
+
 
         function askFollowupQuestion() {
             var question = $("#chat-input").val();
