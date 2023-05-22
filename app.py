@@ -3,9 +3,11 @@ from wtforms import Form, StringField, IntegerField
 from wtforms.validators import DataRequired
 import os
 import openai
+import random
+import string
 
 app = Flask(__name__)
-app.secret_key = '123456789'
+app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(8))
 
 
 class InputForm(Form):
