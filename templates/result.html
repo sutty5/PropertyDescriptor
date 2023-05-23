@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Generated Description</title>
+    <h1 id="title">Generated Description</h1>
     <style>
         body {
             background-color: #444654;
@@ -15,21 +16,55 @@
             color: #000000;
             margin: auto;
             width: 50%;
+            height: 300px;
+            overflow-y: scroll;
+            text-align: left; /* Keep the text left-aligned */
         }
-        a {
-            color: #4CAF50;
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            color: #ffffff;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
             text-decoration: none;
+            text-align: center;
         }
-        a:hover {
-            color: #45a049;
+        .back-button:hover {
+            background-color: #45a049;
+        }
+        .container {
+            text-align: center;
+        }
+        #title {
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="description-container">
-        <h1>AI Property Description</h1>
-        <p contenteditable="true">{{ description }}</p>
-        <a href="/">Back</a>
+    <div class="container">
+        <div class="description-container" id="chat-window">
+            <!-- The chat messages will appear here -->
+        </div>
+        <a href="/" class="back-button">Back</a>
     </div>
+
+    <script>
+        var source = new EventSource("/stream");
+        source.onmessage = function(event) {
+            var chatWindow = document.getElementById('chat-window');
+            var data = atob(event.data);
+            chatWindow.innerHTML = '';  // Clear the existing content
+            var newMessage = document.createElement('p');
+            newMessage.textContent = data;
+            chatWindow.appendChild(newMessage);
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
+        };
+        source.addEventListener('end', function(event) {  // Listen to 'end' event
+            source.close();
+        });
+    </script>
+
 </body>
 </html>

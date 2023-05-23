@@ -1,11 +1,13 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-from wtforms import Form, StringField, IntegerField
+from flask import Flask, render_template, request, Response, session, flash
+from wtforms import Form, StringField, IntegerField, TextAreaField
 from wtforms.validators import DataRequired
 import os
 import openai
+import base64
+
 
 app = Flask(__name__)
-app.secret_key = '123456789'
+app.secret_key = "your-secret-key"
 
 
 class InputForm(Form):
@@ -39,18 +41,8 @@ class InputForm(Form):
 def index():
     form = InputForm(request.form)
     if request.method == 'POST' and form.validate():
-        session.clear()  # Clear previous conversation
-        return redirect(url_for('generate'))
-    return render_template('index.html', form=form)
 
-
-@app.route('/generate', methods=['GET', 'POST'])
-def generate():
-    form = InputForm(request.form)
-    if form.validate():
-
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        prompt = f"Write a top-selling description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
+        prompt = f"Write a description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
         # Add details that might not be applicable for every property
         if form.community.data:
             prompt += f" The property is part of a community or complex named {form.community.data}."
@@ -91,44 +83,42 @@ def generate():
         if form.recent_updates.data:
             prompt += f" Recent updates or renovations include {form.recent_updates.data}."
 
-        messages = [
-            {"role": "system", "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
-            {"role": "user", "content": f"Let's think about this step-by-step. {prompt}"}
-        ]
-        print("executing AI")
+        session['prompt'] = prompt
+        return render_template('result.html')
+    return render_template('index.html', form=form)
+
+
+@app.route('/stream')
+def stream():
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    messages = [
+        {"role": "system",
+         "content": "You are an estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed and should use the best sales tactics to really sell the property"},
+        {"role": "user", "content": f"Let's think about this step-by-step. {session['prompt']}"}
+        # Get the prompt from the session
+    ]
+
+    def generate_response():
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.7,
+            stream=True
         )
-        description = response["choices"][0]["message"]["content"]
-        messages.append({"role": "assistant", "content": description})
-        session['messages'] = messages  # Add this line to store messages in the session
-        return jsonify(description=description)
-    return jsonify(error="Invalid form data"), 400
+        collected_messages = ""
+        for chunk in response:
+            if "content" in chunk["choices"][0]["delta"]:
+                message_chunk = chunk["choices"][0]["delta"]["content"]
+                collected_messages += message_chunk
+                encoded_message = base64.b64encode(collected_messages.strip().encode()).decode()
+                yield f"data: {encoded_message}\n\n"
+        messages.append({"role": "assistant", "content": collected_messages})
+        print(collected_messages)
+        yield 'event: end\ndata: close\n\n'  # Add this line
 
-
-@app.route('/follow_up', methods=['POST'])
-def follow_up():
-    user_message = request.form.get('question')  # Corrected here
-    if 'messages' in session:
-        messages = session['messages']
-        messages.append({"role": "user", "content": user_message})
-        # Generate response
-        openai.api_key = os.getenv("OPENAI_API_KEY")
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.9,
-        )
-        assistant_message = response["choices"][0]["message"]["content"]
-        messages.append({"role": "assistant", "content": assistant_message})
-        session['messages'] = messages  # Save updated conversation to session
-        return jsonify(message=assistant_message)
-    else:
-        print("Nope")
-        return jsonify(error="No conversation found"), 400
+    return Response(generate_response(), content_type="text/event-stream")
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True, port=5002)
