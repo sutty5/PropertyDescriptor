@@ -94,7 +94,7 @@ def stream():
 
     messages = [
         {"role": "system",
-         "content": "You are an estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed and should use the best sales tactics to really sell the property"},
+         "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
         {"role": "user", "content": f"Let's think about this step-by-step. {session['prompt']}"}
         # Get the prompt from the session
     ]
