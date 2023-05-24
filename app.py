@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, Response, session, flash
+from flask import Flask, render_template, request, Response, session, flash, redirect, url_for
 from wtforms import Form, StringField, IntegerField, TextAreaField
 from wtforms.validators import DataRequired
 import os
@@ -92,6 +92,9 @@ def index():
 
 @app.route('/stream')
 def stream():
+    if 'prompt' not in session:
+        flash('Please submit the form first.')
+        return redirect(url_for('index'))
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     messages = [
@@ -134,4 +137,4 @@ def stream():
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.86.39', port=5000)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
