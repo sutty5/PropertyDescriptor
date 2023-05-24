@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, Response, session, flash
 from wtforms import Form, StringField, IntegerField, TextAreaField
 from wtforms.validators import DataRequired
+from flask_socketio import SocketIO, emit
 import os
 import openai
 import base64
@@ -8,6 +9,7 @@ import base64
 
 app = Flask(__name__)
 app.secret_key = "your-secret-key"
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 class InputForm(Form):
@@ -88,8 +90,13 @@ def index():
     return render_template('index.html', form=form)
 
 
-@app.route('/stream')
-def stream():
+@app.route('/result')
+def result_page():
+    return render_template('result.html')
+
+
+@socketio.on('start', namespace='/stream')
+def handle_start(data):
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     messages = [
@@ -99,26 +106,24 @@ def stream():
         # Get the prompt from the session
     ]
 
-    def generate_response():
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
-            stream=True
-        )
-        collected_messages = ""
-        for chunk in response:
-            if "content" in chunk["choices"][0]["delta"]:
-                message_chunk = chunk["choices"][0]["delta"]["content"]
-                collected_messages += message_chunk
-                encoded_message = base64.b64encode(collected_messages.strip().encode()).decode()
-                yield f"data: {encoded_message}\n\n"
-        messages.append({"role": "assistant", "content": collected_messages})
-        print(collected_messages)
-        yield 'event: end\ndata: close\n\n'  # Add this line
-
-    return Response(generate_response(), content_type="text/event-stream")
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7,
+        stream=True
+    )
+    collected_messages = ""
+    for chunk in response:
+        if "content" in chunk["choices"][0]["delta"]:
+            message_chunk = chunk["choices"][0]["delta"]["content"]
+            print(message_chunk)
+            collected_messages += message_chunk
+            emit('response', {'data': collected_messages.strip()}, namespace='/stream')
+            socketio.sleep(0)
+    messages.append({"role": "assistant", "content": collected_messages})
+    print(collected_messages)
+    emit('end', {'data': 'close'}, namespace='/stream')
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.86.39', port=5000)
+    socketio.run(app, host='192.168.86.39', port=5000, debug=True)
