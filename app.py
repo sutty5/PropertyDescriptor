@@ -8,7 +8,7 @@ import base64
 
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key"
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-default-secret-key')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 
