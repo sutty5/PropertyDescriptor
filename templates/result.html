@@ -49,34 +49,32 @@
         <div class="description-container" id="chat-window">
             <!-- The chat messages will appear here -->
         </div>
+        <input id="user-input" type="text" placeholder="Messaging Does not work yet">
+        <button id="send-button">Send</button>
         <a href="/" class="back-button">Back</a>
     </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 
-<script>
-    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/stream');
+    <script>
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/stream');
 
-    socket.on('connect', function() {
-        // Emit the 'start' event after connecting
-        socket.emit('start', {data: 'Start the response generation'});
-    });
+        socket.on('connect', function() {
+            // Emit the 'start' event after connecting
+            socket.emit('start', {data: 'Start the response generation'});
+        });
 
-    socket.on('response', function(msg) {
-        var chatWindow = document.getElementById('chat-window');
-        chatWindow.innerHTML = '';  // Clear the existing content
-        var data = msg.data;  // The response data is in msg.data
-        var newMessage = document.createElement('p');
-        newMessage.textContent = data;
-        chatWindow.appendChild(newMessage);
-        chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
-    });
+        socket.on('response', function(msg) {
+            var chatWindow = document.getElementById('chat-window');
+            var data = msg.data;  // The response data is in msg.data
+            chatWindow.innerText = data; // Update the content
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
+        });
 
-    socket.on('end', function(msg) {
-        socket.disconnect();
-    });
-</script>
-
+        socket.on('end', function(msg) {
+            socket.disconnect();
+        });
+    </script>
 
 </body>
 </html>

@@ -4,13 +4,13 @@ from wtforms.validators import DataRequired
 from flask_socketio import SocketIO, emit
 import os
 import openai
-import base64
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-default-secret-key')
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+messages = []
 
 class InputForm(Form):
     property_type = StringField('Property Type', validators=[DataRequired()])
@@ -97,6 +97,7 @@ def result_page():
 
 @socketio.on('start', namespace='/stream')
 def handle_start(data):
+    global messages
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     messages = [
@@ -120,6 +121,35 @@ def handle_start(data):
             collected_messages += message_chunk
             emit('response', {'data': collected_messages.strip()}, namespace='/stream')
             socketio.sleep(0)
+    messages.append({"role": "assistant", "content": collected_messages})
+    print(collected_messages)
+    emit('end', {'data': 'close'}, namespace='/stream')
+
+
+@socketio.on('user_message', namespace='/stream')
+def handle_user_message(data):
+    global messages
+
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    # Add the user's message to the messages list
+    messages.append({"role": "user", "content": data})
+
+    # Generate the response
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.7,
+        stream=True
+    )
+
+    collected_messages = ""
+    for chunk in response:
+        if "content" in chunk["choices"][0]["delta"]:
+            message_chunk = chunk["choices"][0]["delta"]["content"]
+            collected_messages += message_chunk
+            emit('response', {'data': collected_messages.strip()}, namespace='/stream')
+
     messages.append({"role": "assistant", "content": collected_messages})
     print(collected_messages)
     emit('end', {'data': 'close'}, namespace='/stream')
