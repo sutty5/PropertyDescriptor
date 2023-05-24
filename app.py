@@ -67,9 +67,9 @@ def index():
         if form.decorative_style.data:
             prompt += f" The property is decorated in a {form.decorative_style.data} style."
         if form.kitchen_layout.data:
-            prompt += f" The kitchen is {form.kitchen_layout.data}."
+            prompt += f" The kitchen layout: {form.kitchen_layout.data}."
         if form.kitchen_fittings.data:
-            prompt += f" It is fitted with {form.kitchen_fittings.data}."
+            prompt += f" The kitchen is fitted with {form.kitchen_fittings.data}."
         if form.kitchen_features.data:
             prompt += f" Special kitchen features include {form.kitchen_features.data}."
         if form.bathroom_details.data:
@@ -79,7 +79,7 @@ def index():
         if form.security_features.data:
             prompt += f" Security features of the property include {form.security_features.data}."
         if form.character_details.data:
-            prompt += f" The property boasts {form.character_details.data}."
+            prompt += f" Property character: {form.character_details.data}."
         if form.points_of_interest.data:
             prompt += f" Nearby points of interest include {form.points_of_interest.data}."
         if form.recent_updates.data:
@@ -102,7 +102,7 @@ def handle_start(data):
 
     messages = [
         {"role": "system",
-         "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
+         "content": "You are a world renowned estate agent salesperson for The Property Shop, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use top-tier sales tactics for selling a property. Highlight unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
         {"role": "user", "content": f"Let's think about this step-by-step. {session['prompt']}"}
         # Get the prompt from the session
     ]
