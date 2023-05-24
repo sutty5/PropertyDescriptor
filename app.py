@@ -7,6 +7,7 @@ import base64
 import secrets
 import string
 
+
 app = Flask(__name__)
 app.secret_key = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
 
@@ -96,30 +97,41 @@ def stream():
     messages = [
         {"role": "system",
          "content": "You are a world renowned estate agent salesperson, Your job is to write a beautiful description of a property based on data given to you about a property. The description should be detailed, and should use the best sales tactics to really sell the property. Highlight the unique selling points, Create an emotional connection, Use persuasive language, Keep it concise and easy to read, but most importantly keep it realistic and accurate."},
-        {"role": "user", "content": f"Let's think about this step-by-step. {session['prompt']}"}
+        {"role": "user", "content": session['prompt']}
         # Get the prompt from the session
     ]
 
     def generate_response():
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            temperature=0.7,
-            stream=True
-        )
-        collected_messages = ""
-        for chunk in response:
-            if "content" in chunk["choices"][0]["delta"]:
-                message_chunk = chunk["choices"][0]["delta"]["content"]
-                collected_messages += message_chunk
-                encoded_message = base64.b64encode(collected_messages.strip().encode()).decode()
-                yield f"data: {encoded_message}\n\n"
-        messages.append({"role": "assistant", "content": collected_messages})
-        print(collected_messages)
-        yield 'event: end\ndata: close\n\n'  # Add this line
+        retry_limit = 5
+        for attempt in range(retry_limit):
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=messages,
+                    temperature=0.7,
+                    stream=True
+                )
+                collected_messages = ""
+                for chunk in response:
+                    if "content" in chunk["choices"][0]["delta"]:
+                        message_chunk = chunk["choices"][0]["delta"]["content"]
+                        collected_messages += message_chunk
+                        encoded_message = base64.b64encode(collected_messages.strip().encode()).decode()
+                        yield f"data: {encoded_message}\n\n"
+                messages.append({"role": "assistant", "content": collected_messages})
+                print(collected_messages)
+                yield 'event: end\ndata: close\n\n'  # Add this line
+                break  # If successful, break out of the loop
+            except Exception as e:
+                print(f"Error encountered during OpenAI request: {e}")
+                if attempt + 1 == retry_limit:
+                    print("Reached maximum retry limit. Aborting.")
+                    yield 'event: end\ndata: error\n\n'  # Send error signal to the client
+                    break
+                print("Retrying...")
 
     return Response(generate_response(), content_type="text/event-stream")
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='192.168.86.39', port=5000)
