@@ -7,7 +7,6 @@ import base64
 import secrets
 import string
 
-
 app = Flask(__name__)
 app.secret_key = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
 
