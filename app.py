@@ -9,7 +9,7 @@ import string
 
 
 app = Flask(__name__)
-app.secret_key = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-default-secret-key')
 
 
 class InputForm(Form):
