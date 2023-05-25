@@ -108,7 +108,7 @@ def handle_start(data):
     ]
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.8,
         stream=True
@@ -137,7 +137,7 @@ def handle_user_message(data):
 
     # Generate the response
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.7,
         stream=True
