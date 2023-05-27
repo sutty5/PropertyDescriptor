@@ -13,13 +13,14 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 messages = []
 
+
 class InputForm(Form):
     property_type = StringField('Property Type', validators=[DataRequired()])
     location = StringField('Location', validators=[DataRequired()])
-    bedrooms = IntegerField('Number of Bedrooms', validators=[DataRequired()])
-    bathrooms = IntegerField('Number of Bathrooms', validators=[DataRequired()])
-    en_suite_bathrooms = IntegerField('Number of En Suite Bathrooms')
-    square_footage = IntegerField('Square Footage', validators=[DataRequired()])
+    bedrooms = StringField('Number of Bedrooms', validators=[DataRequired()])
+    bathrooms = StringField('Number of Bathrooms', validators=[DataRequired()])
+    en_suite_bathrooms = StringField('Number of En Suite Bathrooms')
+    square_footage = StringField('Square Footage')
     community = StringField('Community or Complex')
     driveway = StringField('Driveway Type')
     garage = StringField('Garage Details')
@@ -45,8 +46,10 @@ def index():
     form = InputForm(request.form)
     if request.method == 'POST' and form.validate():
 
-        prompt = f"Write a description for a {form.property_type.data} property located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
+        prompt = f"Write a detailed description for a {form.property_type.data} property located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms,"
         # Add details that might not be applicable for every property
+        if form.square_footage.data:
+            prompt += f"{form.square_footage.data} square feet."
         if form.community.data:
             prompt += f" The property is part of a community or complex named {form.community.data}."
         if form.driveway.data:
@@ -66,7 +69,7 @@ def index():
         if form.natural_light.data:
             prompt += f" The property benefits from {form.natural_light.data}."
         if form.decorative_style.data:
-            prompt += f" The property is decorated in a {form.decorative_style.data} style."
+            prompt += f" The style of property, {form.decorative_style.data}."
         if form.kitchen_layout.data:
             prompt += f" The kitchen layout: {form.kitchen_layout.data}."
         if form.kitchen_fittings.data:
