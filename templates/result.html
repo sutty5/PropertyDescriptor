@@ -10,37 +10,63 @@
             color: #ffffff;
             font-family: 'Arial', sans-serif;
         }
+
+        #title {
+            text-align: center;
+        }
+
         .description-container {
             border-radius: 10px;
             background-color: #ffffff;
             padding: 20px;
             color: #000000;
             margin: auto;
-            width: 90%; /* Adjust width for better responsiveness on mobile */
-            max-width: 600px; /* Limit maximum width for large screens */
+            width: 90%;
+            max-width: 600px;
             height: 500px;
             overflow-y: scroll;
-            text-align: left; /* Keep the text left-aligned */
-        }
-        .back-button {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 10px 0;
-            color: #ffffff;
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 5px;
-            text-decoration: none;
-            text-align: center;
-        }
-        .back-button:hover {
-            background-color: #45a049;
+            text-align: left;
         }
         .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             text-align: center;
         }
-        #title {
+
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 640px;
+            margin-bottom: 30px;
+        }
+
+        #user-input {
+            flex: 0.8;
+            padding: 10px;
+        }
+
+        #send-button {
+            flex: 0.2;
+            padding: 10px 20px;
+            border: none;
+            background-color: #34a1e5;
+            color: #fff;
+        }
+
+        .back-button {
+            display: block;
+            width: 90%;
+            max-width: 600px;
+            padding: 10px;
+            margin-top: 50px;
+            margin: auto;
             text-align: center;
+            border: 1px solid #ccc;
+            text-decoration: none;
+            color: #fff;
+            background-color: #4CAF50
         }
     </style>
 </head>
@@ -49,14 +75,19 @@
         <div class="description-container" id="chat-window">
             <!-- The chat messages will appear here -->
         </div>
-        <input id="user-input" type="text" placeholder="Messaging Does not work yet">
-        <button id="send-button">Send</button>
+    </div>
+    <div class="container">
+        <div class="input-container">
+            <input id="user-input" type="text" placeholder="Ask for changes or additional description...">
+            <button id="send-button">Send</button>
+        </div>
         <a href="/" class="back-button">Back</a>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
 
     <script>
+        var tempMessage = document.createElement('p');  // Create a temporary element to display the streaming message
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + '/stream');
 
         socket.on('connect', function() {
@@ -67,13 +98,48 @@
         socket.on('response', function(msg) {
             var chatWindow = document.getElementById('chat-window');
             var data = msg.data;  // The response data is in msg.data
-            chatWindow.innerText = data; // Update the content
+            tempMessage.innerText = data;  // Update the temporary message
+            tempMessage.classList.add('dummy');  // Add a dummy class to force re-render
+            chatWindow.appendChild(tempMessage);  // Add the temporary message to the chat window
             chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
+            void tempMessage.offsetWidth;  // Trigger a reflow
+            tempMessage.classList.remove('dummy');  // Remove the dummy class
+        });
+
+        // Handle form submission
+        document.getElementById('send-button').addEventListener('click', function(e) {
+            e.preventDefault();  // Prevent the form from being submitted normally
+            var userInput = document.getElementById('user-input').value;
+
+            // Check if the socket is connected
+            if (!socket.connected) {
+                socket.connect();  // Connect the socket if it's not connected
+            }
+
+            socket.emit('user_message', userInput);  // Send the user's message to the server
+            document.getElementById('user-input').value = '';  // Clear the input field
+        });
+
+        socket.on('user_response', function(msg) {
+            var chatWindow = document.getElementById('chat-window');
+            var data = msg.data;  // The response data is in msg.data
+            tempMessage.innerText = data;  // Update the temporary message
+            tempMessage.classList.add('dummy');  // Add a dummy class to force re-render
+            chatWindow.appendChild(tempMessage);  // Add the temporary message to the chat window
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
+            void tempMessage.offsetWidth;  // Trigger a reflow
+            tempMessage.classList.remove('dummy');  // Remove the dummy class
         });
 
         socket.on('end', function(msg) {
-            socket.disconnect();
+            var chatWindow = document.getElementById('chat-window');
+            var finalMessage = document.createElement('p');  // Create a new element for the final message
+            finalMessage.innerText = tempMessage.innerText;  // Copy the text from the temporary message
+            chatWindow.removeChild(tempMessage);  // Remove the temporary message from the chat window
+            chatWindow.appendChild(finalMessage);  // Add the final message to the chat window
+            chatWindow.scrollTo(0, chatWindow.scrollHeight);  // Scroll to the bottom
         });
+
     </script>
 
 </body>

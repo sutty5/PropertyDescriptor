@@ -4,6 +4,7 @@ from wtforms.validators import DataRequired
 from flask_socketio import SocketIO, emit
 import os
 import openai
+import time
 
 
 app = Flask(__name__)
@@ -44,7 +45,7 @@ def index():
     form = InputForm(request.form)
     if request.method == 'POST' and form.validate():
 
-        prompt = f"Write a description for a {form.property_type.data} located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
+        prompt = f"Write a description for a {form.property_type.data} property located in {form.location.data} with {form.bedrooms.data} bedrooms, {form.bathrooms.data} bathrooms, {form.square_footage.data} square feet."
         # Add details that might not be applicable for every property
         if form.community.data:
             prompt += f" The property is part of a community or complex named {form.community.data}."
@@ -97,6 +98,7 @@ def result_page():
 
 @socketio.on('start', namespace='/stream')
 def handle_start(data):
+    print("triggered")
     global messages
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -119,8 +121,8 @@ def handle_start(data):
             message_chunk = chunk["choices"][0]["delta"]["content"]
             print(message_chunk)
             collected_messages += message_chunk
-            emit('response', {'data': collected_messages.strip()}, namespace='/stream')
-            socketio.sleep(0)
+            emit('response', {'data': "Assistant: " + collected_messages.strip()}, namespace='/stream')
+            time.sleep(0.1)
     messages.append({"role": "assistant", "content": collected_messages})
     print(collected_messages)
     emit('end', {'data': 'close'}, namespace='/stream')
@@ -148,7 +150,8 @@ def handle_user_message(data):
         if "content" in chunk["choices"][0]["delta"]:
             message_chunk = chunk["choices"][0]["delta"]["content"]
             collected_messages += message_chunk
-            emit('response', {'data': collected_messages.strip()}, namespace='/stream')
+            emit('user_response', {'data': "Assistant: " + collected_messages.strip()}, namespace='/stream')
+            time.sleep(0.1)
 
     messages.append({"role": "assistant", "content": collected_messages})
     print(collected_messages)
