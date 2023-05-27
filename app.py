@@ -40,7 +40,6 @@ class InputForm(Form):
     points_of_interest = StringField('Nearby Points of Interest')
     recent_updates = StringField('Recent Updates or Renovations')
 
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = InputForm(request.form)
