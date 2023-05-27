@@ -19,7 +19,7 @@ class InputForm(Form):
     bedrooms = IntegerField('Number of Bedrooms', validators=[DataRequired()])
     bathrooms = IntegerField('Number of Bathrooms', validators=[DataRequired()])
     en_suite_bathrooms = IntegerField('Number of En Suite Bathrooms')
-    square_footage = IntegerField('Square Footage', validators=[DataRequired()])
+    square_footage = IntegerField('Square Footage')
     community = StringField('Community or Complex')
     driveway = StringField('Driveway Type')
     garage = StringField('Garage Details')
